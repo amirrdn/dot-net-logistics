@@ -1,0 +1,472 @@
+@using System.Linq
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@model IEnumerable<Logistics.Models.Shipment>
+
+@{
+    ViewData["Title"] = "Daftar Shipment";
+}
+
+<div class="container-fluid">
+    <h1 class="h3 mb-4 text-gray-800">@ViewData["Title"]</h1>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-primary">Daftar Shipment</h6>
+            <button class="btn btn-primary" onclick="showCreateModal()">
+                <i class="fas fa-plus"></i> Tambah Shipment
+            </button>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered" id="shipmentTable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>AWB</th>
+                            <th>Pengirim</th>
+                            <th>Penerima</th>
+                            <th>Berat</th>
+                            <th>Status</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Create/Edit -->
+<div class="modal fade" id="shipmentModal" tabindex="-1" role="dialog" aria-labelledby="shipmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="shipmentModalLabel">Tambah Shipment</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="shipmentForm">
+                    <input type="hidden" id="shipmentId" />
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>AWB</label>
+                                <input type="text" class="form-control" id="awb" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Nama Pengirim</label>
+                                <input type="text" class="form-control" id="senderName" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Telepon Pengirim</label>
+                                <input type="number" class="form-control" id="senderPhone" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Alamat Pengirim</label>
+                                <textarea class="form-control" id="senderAddress" required></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Kode Pos Pengirim</label>
+                                <input type="number" class="form-control" id="senderPostcode" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Nama Penerima</label>
+                                <input type="text" class="form-control" id="recipientName" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Telepon Penerima</label>
+                                <input type="number" class="form-control" id="recipientPhone" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Alamat Penerima</label>
+                                <textarea class="form-control" id="recipientAddress" required></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Kode Pos Penerima</label>
+                                <input type="number" class="form-control" id="recipientPostcode" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Berat (kg)</label>
+                                <input type="number" class="form-control" id="weight" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Dimensi</label>
+                                <input type="text" class="form-control" id="dimension" required>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-primary" onclick="saveShipment()">Simpan</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Update Status -->
+<div class="modal fade" id="updateStatusModal" tabindex="-1" role="dialog" aria-labelledby="updateStatusModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="updateStatusModalLabel">Update Status Shipment</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="updateStatusForm">
+                    <input type="hidden" id="statusShipmentId" />
+                    <div class="form-group">
+                        <label>AWB</label>
+                        <input type="text" class="form-control" id="statusAWB" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select class="form-control" id="newStatus" required>
+                            <option value="">Pilih Status</option>
+                            <option value="Shipment Pick Up">Shipment Pick Up</option>
+                            <option value="On Delivery">On Delivery</option>
+                            <option value="POD">POD (Proof of Delivery)</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-primary" onclick="saveStatus()">Simpan</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let token = localStorage.getItem('token');
+
+        if (!token) {
+            window.location.href = '/Account/Login';
+        } else {
+            $.ajax({
+                url: '/api/Auth/check-token',
+                method: 'GET',
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                },
+                success: function(response) {
+                },
+                error: function(xhr, status, error) {
+                    if (xhr.status === 401) {
+                        localStorage.removeItem('token');
+                        window.location.href = '/Account/Login';
+                    }
+                }
+            });
+        }
+
+        let dataTable;
+
+        $(document).ready(function() {
+            dataTable = $('#shipmentTable').DataTable({
+                ajax: {
+                    url: '/api/shipment',
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    },
+                    dataSrc: '',
+                    error: function(xhr, status, error) {
+                        if (xhr.status === 401) {
+                            localStorage.removeItem('token');
+                            window.location.href = '/Account/Login';
+                        }
+                    }
+                },
+                columns: [
+                    { data: 'awb' },
+                    { data: 'senderName' },
+                    { data: 'recipientName' },
+                    { data: 'weight' },
+                    { data: 'status' },
+                    {
+                        data: null,
+                        render: function(data, type, row) {
+                            return `
+                                <button class="btn btn-sm btn-info" onclick="showEditModal(${row.id})">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-warning" onclick="showUpdateStatusModal(${row.id})">
+                                    <i class="fas fa-sync"></i>
+                                </button>
+                                <button class="btn btn-sm btn-success" onclick="showHistory(${row.id})">
+                                    <i class="fas fa-history"></i>
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteShipment(${row.id})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            `;
+                        }
+                    }
+                ]
+            });
+
+            $('.close, .btn-secondary').on('click', function() {
+                $(this).closest('.modal').modal('hide');
+            });
+        });
+
+        function showCreateModal() {
+            $('#shipmentModalLabel').text('Tambah Shipment');
+            $('#shipmentForm')[0].reset();
+            $('#shipmentId').val('');
+            $('#shipmentModal').modal('show');
+        }
+
+        function showEditModal(id) {
+            $('#shipmentModalLabel').text('Edit Shipment');
+            $.ajax({
+                url: `/api/shipment/${id}`,
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                },
+                success: function(data) {
+                    $('#shipmentId').val(data.id);
+                    $('#awb').val(data.awb);
+                    $('#senderName').val(data.senderName);
+                    $('#senderPhone').val(data.senderPhone);
+                    $('#senderAddress').val(data.senderAddress);
+                    $('#senderPostcode').val(data.senderPostcode);
+                    $('#recipientName').val(data.recipientName);
+                    $('#recipientPhone').val(data.recipientPhone);
+                    $('#recipientAddress').val(data.recipientAddress);
+                    $('#recipientPostcode').val(data.recipientPostcode);
+                    $('#weight').val(data.weight);
+                    $('#dimension').val(data.dimension);
+                    $('#shipmentModal').modal('show');
+                }
+            });
+        }
+
+        function showUpdateStatusModal(id) {
+            $('#updateStatusModalLabel').text('Update Status Shipment');
+            $.ajax({
+                url: `/api/shipment/${id}`,
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                },
+                success: function(data) {
+                    $('#statusShipmentId').val(data.id);
+                    $('#statusAWB').val(data.awb);
+                    $('#newStatus').val(data.status);
+                    $('#updateStatusModal').modal('show');
+                }
+            });
+        }
+
+        function saveShipment() {
+            const id = $('#shipmentId').val();
+            const awb = $('#awb').val();
+            
+            if (!id) {
+                $.ajax({
+                    url: `/api/shipment/AWB/${awb}`,
+                    method: 'GET',
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    },
+                    success: function(data) {
+                        if (data) {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error!',
+                                text: 'AWB sudah terdaftar. Silakan gunakan AWB yang lain.'
+                            });
+                            return;
+                        }
+                        proceedWithSave();
+                    },
+                    error: function(xhr) {
+                        if (xhr.status === 404) {
+                            proceedWithSave();
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error!',
+                                text: 'Terjadi kesalahan saat memeriksa AWB.'
+                            });
+                        }
+                    }
+                });
+            } else {
+                proceedWithSave();
+            }
+        }
+
+        function proceedWithSave() {
+            const id = $('#shipmentId').val();
+            const data = {
+                awb: $('#awb').val(),
+                senderName: $('#senderName').val(),
+                senderPhone: $('#senderPhone').val(),
+                senderAddress: $('#senderAddress').val(),
+                senderPostcode: $('#senderPostcode').val(),
+                recipientName: $('#recipientName').val(),
+                recipientPhone: $('#recipientPhone').val(),
+                recipientAddress: $('#recipientAddress').val(),
+                recipientPostcode: $('#recipientPostcode').val(),
+                weight: parseFloat($('#weight').val()),
+                dimension: $('#dimension').val()
+            };
+
+            if (id) {
+                data.id = parseInt(id);
+            }
+
+            const url = id ? `/api/shipment/${id}` : '/api/shipment';
+            const method = id ? 'PUT' : 'POST';
+
+            $.ajax({
+                url: url,
+                method: method,
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify(data),
+                success: function() {
+                    $('#shipmentModal').modal('hide');
+                    dataTable.ajax.reload();
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil!',
+                        text: 'Data shipment berhasil disimpan.'
+                    });
+                },
+                error: function(xhr, status, error) {
+                    if (xhr.status === 401) {
+                        localStorage.removeItem('token');
+                        window.location.href = '/Account/Login';
+                    } else {
+                        let errorMessage = 'Terjadi kesalahan saat menyimpan data.';
+                        if (xhr.responseJSON && xhr.responseJSON.errors) {
+                            errorMessage = Object.values(xhr.responseJSON.errors).flat().join('\n');
+                        }
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error!',
+                            text: errorMessage
+                        });
+                    }
+                }
+            });
+        }
+
+        function saveStatus() {
+            const shipmentId = $('#statusShipmentId').val();
+            const awb = $('#statusAWB').val();
+            const status = $('#newStatus').val();
+
+            if (!status) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error!',
+                    text: 'Status harus dipilih!'
+                });
+                return;
+            }
+
+            const shipmentStatus = {
+                shipmentId: parseInt(shipmentId),
+                awb: awb,
+                status: status,
+                statusDate: new Date()
+            };
+
+            $.ajax({
+                url: '/api/tracking',
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify(shipmentStatus),
+                success: function() {
+                    $('#updateStatusModal').modal('hide');
+                    dataTable.ajax.reload();
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil!',
+                        text: 'Status shipment berhasil diperbarui.'
+                    });
+                },
+                error: function(xhr, status, error) {
+                    if (xhr.status === 401) {
+                        localStorage.removeItem('token');
+                        window.location.href = '/Account/Login';
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error!',
+                            text: 'Terjadi kesalahan saat memperbarui status.'
+                        });
+                    }
+                }
+            });
+        }
+
+        function deleteShipment(id) {
+            Swal.fire({
+                title: 'Apakah Anda yakin?',
+                text: "Data shipment akan dihapus permanen!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Ya, hapus!',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: `/api/shipment/${id}`,
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': 'Bearer ' + token
+                        },
+                        success: function() {
+                            dataTable.ajax.reload();
+                            Swal.fire(
+                                'Terhapus!',
+                                'Data shipment berhasil dihapus.',
+                                'success'
+                            );
+                        },
+                        error: function(xhr, status, error) {
+                            if (xhr.status === 401) {
+                                localStorage.removeItem('token');
+                                window.location.href = '/Account/Login';
+                            } else {
+                                Swal.fire(
+                                    'Error!',
+                                    'Terjadi kesalahan saat menghapus data.',
+                                    'error'
+                                );
+                            }
+                        }
+                    });
+                }
+            });
+        }
+
+        function showHistory(id) {
+            window.location.href = `/Shipment/History/${id}`;
+        }
+    </script>
+}

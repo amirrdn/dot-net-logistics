@@ -1,0 +1,53 @@
+@model IEnumerable<Logistics.Models.ShipmentStatus>
+
+@{
+    ViewData["Title"] = "Riwayat Tracking";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container-fluid">
+    <h1 class="h3 mb-4 text-gray-800">@ViewData["Title"]</h1>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Riwayat Status Pengiriman</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered" id="trackingTable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>AWB</th>
+                            <th>Status</th>
+                            <th>Tanggal Status</th>
+                            <th>Pengirim</th>
+                            <th>Penerima</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var status in Model)
+                        {
+                            <tr>
+                                <td>@status.AWB</td>
+                                <td>@status.Status</td>
+                                <td>@status.StatusDate.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>@status.Shipment?.SenderName</td>
+                                <td>@status.Shipment?.RecipientName</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            $('#trackingTable').DataTable({
+                "order": [[2, "desc"]]
+            });
+        });
+    </script>
+} 

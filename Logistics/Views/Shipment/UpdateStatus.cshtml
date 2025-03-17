@@ -1,0 +1,50 @@
+@{
+    Layout = "_Layout";
+}
+
+@model Logistics.Models.Shipment
+
+<div class="min-h-screen bg-gray-100 py-6 flex flex-col justify-center sm:py-12">
+    <div class="relative py-3 sm:max-w-xl sm:mx-auto">
+        <div class="relative px-4 py-10 bg-white shadow-lg sm:rounded-3xl sm:p-20">
+            <div class="max-w-md mx-auto">
+                <div class="divide-y divide-gray-200">
+                    <div class="py-8 text-base leading-6 space-y-4 text-gray-700 sm:text-lg sm:leading-7">
+                        <h2 class="text-2xl font-bold text-gray-800 mb-6">Update Status Pengiriman</h2>
+                        
+                        <div class="mb-4">
+                            <p class="text-sm text-gray-600">AWB: @Model.AWB</p>
+                            <p class="text-sm text-gray-600">Pengirim: @Model.SenderName</p>
+                            <p class="text-sm text-gray-600">Penerima: @Model.RecipientName</p>
+                        </div>
+
+                        <form asp-controller="Shipment" asp-action="UpdateStatus" method="post">
+                            <input type="hidden" name="id" value="@Model.Id" />
+                            
+                            <div class="mb-4">
+                                <label class="block text-gray-700 text-sm font-bold mb-2" for="status">
+                                    Status Pengiriman
+                                </label>
+                                <select name="status" id="status" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                                    @{
+                                        var currentStatus = Model.ShipmentStatus?.OrderByDescending(s => s.StatusDate).FirstOrDefault()?.Status ?? Model.Status;
+                                    }
+                                    <option value="Shipment Pick Up" @(currentStatus == "Shipment Pick Up" ? "selected" : "")>Shipment Pick Up</option>
+                                    <option value="On Delivery" @(currentStatus == "On Delivery" ? "selected" : "")>On Delivery</option>
+                                    <option value="POD" @(currentStatus == "POD" ? "selected" : "")>POD (Proof of Delivery)</option>
+                                </select>
+                            </div>
+
+                            <div class="flex items-center justify-between">
+                                <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                                    Update Status
+                                </button>
+                                <a asp-action="Index" class="text-indigo-600 hover:text-indigo-800">Kembali ke Daftar</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div> 

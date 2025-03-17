@@ -1,0 +1,389 @@
+@model Logistics.Models.User
+
+@{
+    ViewData["Title"] = "Manajemen Pengguna";
+}
+
+<div class="container-fluid">
+    <h1 class="h3 mb-4 text-gray-800">@ViewData["Title"]</h1>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["SuccessMessage"]
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    }
+
+    <div class="row">
+        <div class="col-xl-4">
+            <!-- Profile picture card-->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Foto Profil</h6>
+                </div>
+                <div class="card-body text-center">
+                    <img class="img-profile rounded-circle" src="~/img/undraw_profile.svg" style="width: 150px;">
+                    <p class="mt-3">@Model.FullName</p>
+                    <p class="text-muted">@Model.Role</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-8">
+            <!-- Account details card-->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Detail Akun</h6>
+                </div>
+                <div class="card-body">
+                    <form id="profileForm" asp-action="UpdateProfile" method="post">
+                        <input type="hidden" asp-for="Id" />
+                        <div class="form-group">
+                            <label>Username</label>
+                            <input type="text" class="form-control" asp-for="Username" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label>Nama Lengkap</label>
+                            <input type="text" class="form-control" asp-for="FullName">
+                            <span asp-validation-for="FullName" class="text-danger"></span>
+                        </div>
+                        <div class="form-group">
+                            <label>Email</label>
+                            <input type="email" class="form-control" asp-for="Email">
+                            <span asp-validation-for="Email" class="text-danger"></span>
+                        </div>
+                        <div class="form-group">
+                            <label>Password Baru</label>
+                            <input type="password" class="form-control" asp-for="Password">
+                            <small class="form-text text-muted">Kosongkan jika tidak ingin mengubah password</small>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-primary">Daftar Pengguna</h6>
+            <button class="btn btn-primary" onclick="showCreateModal()">
+                <i class="fas fa-plus"></i> Tambah Pengguna
+            </button>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered" id="userTable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Nama Lengkap</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Terakhir Login</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Create/Edit -->
+<div class="modal fade" id="userModal" tabindex="-1" role="dialog" aria-labelledby="userModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="userModalLabel">Tambah Pengguna</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="userForm">
+                    <input type="hidden" id="userId" />
+                    <div class="form-group">
+                        <label>Username</label>
+                        <input type="text" class="form-control" id="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" class="form-control" id="password">
+                        <small class="form-text text-muted">Kosongkan jika tidak ingin mengubah password</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Nama Lengkap</label>
+                        <input type="text" class="form-control" id="fullName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" class="form-control" id="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Role</label>
+                        <select class="form-control" id="role" required>
+                            <option value="User">User</option>
+                            <option value="Admin">Admin</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <div class="custom-control custom-switch">
+                            <input type="checkbox" class="custom-control-input" id="isActive">
+                            <label class="custom-control-label" for="isActive">Aktif</label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-primary" onclick="saveUser()">Simpan</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let token = localStorage.getItem('token');
+        let dataTable;
+
+        if (!token) {
+            window.location.href = '/Account/Login';
+            return;
+        }
+
+        function checkToken() {
+            $.ajax({
+                url: '/api/Auth/check-token',
+                method: 'GET',
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                },
+                success: function(response) {
+                },
+                error: function(xhr) {
+                    console.error('Token tidak valid:', xhr);
+                    if (xhr.status === 401) {
+                        localStorage.removeItem('token');
+                        window.location.href = '/Account/Login';
+                    }
+                }
+            });
+        }
+
+        $(document).ready(function() {
+            checkToken();
+
+            $('#profileForm').on('submit', function(e) {
+                e.preventDefault();
+                const formData = $(this).serialize();
+                
+                $.ajax({
+                    url: $(this).attr('action'),
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    },
+                    data: formData,
+                    success: function(response) {
+                        alert('Profil berhasil diperbarui');
+                        window.location.reload();
+                    },
+                    error: function(xhr) {
+                        if (xhr.status === 401) {
+                            localStorage.removeItem('token');
+                            window.location.href = '/Account/Login';
+                        } else {
+                            alert('Terjadi kesalahan saat menyimpan data');
+                        }
+                    }
+                });
+            });
+
+            dataTable = $('#userTable').DataTable({
+                ajax: {
+                    url: '/api/user',
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    },
+                    dataSrc: '',
+                    error: function(xhr) {
+                        if (xhr.status === 401) {
+                            localStorage.removeItem('token');
+                            window.location.href = '/Account/Login';
+                        }
+                    }
+                },
+                columns: [
+                    { data: 'username' },
+                    { data: 'fullName' },
+                    { data: 'email' },
+                    { data: 'role' },
+                    { 
+                        data: 'isActive',
+                        render: function(data) {
+                            return data ? 
+                                '<span class="badge badge-success">Aktif</span>' : 
+                                '<span class="badge badge-danger">Tidak Aktif</span>';
+                        }
+                    },
+                    { 
+                        data: 'lastLoginAt',
+                        render: function(data) {
+                            return data ? new Date(data).toLocaleString('id-ID') : '-';
+                        }
+                    },
+                    {
+                        data: null,
+                        render: function(data, type, row) {
+                            return `
+                                <button class="btn btn-sm btn-info" onclick="showEditModal(${row.id})">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteUser(${row.id})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            `;
+                        }
+                    }
+                ]
+            });
+        });
+
+        function showCreateModal() {
+            $('#userModalLabel').text('Tambah Pengguna');
+            $('#userForm')[0].reset();
+            $('#userId').val('');
+            $('#password').prop('required', true);
+        }
+
+        function showEditModal(id) {
+            $('#userModalLabel').text('Edit Pengguna');
+            $('#password').prop('required', false);
+            $.ajax({
+                url: `/api/user/${id}`,
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                },
+                success: function(data) {
+                    $('#userId').val(data.id);
+                    $('#username').val(data.username);
+                    $('#fullName').val(data.fullName);
+                    $('#email').val(data.email);
+                    $('#role').val(data.role);
+                    $('#isActive').prop('checked', data.isActive);
+                    $('#userModal').modal('show');
+                },
+                error: function(xhr) {
+                    if (xhr.status === 401) {
+                        localStorage.removeItem('token');
+                        window.location.href = '/Account/Login';
+                    }
+                }
+            });
+        }
+
+        function saveUser() {
+            const id = $('#userId').val();
+            const data = {
+                username: $('#username').val(),
+                fullName: $('#fullName').val(),
+                email: $('#email').val(),
+                role: $('#role').val(),
+                isActive: $('#isActive').prop('checked')
+            };
+
+            const password = $('#password').val();
+            if (password) {
+                data.password = password;
+            }
+
+            const url = id ? `/api/user/${id}` : '/api/user';
+            const method = id ? 'PUT' : 'POST';
+
+            $.ajax({
+                url: url,
+                method: method,
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify(data),
+                success: function() {
+                    $('#userModal').modal('hide');
+                    dataTable.ajax.reload();
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil!',
+                        text: 'Data pengguna berhasil disimpan.'
+                    });
+                },
+                error: function(xhr) {
+                    if (xhr.status === 401) {
+                        localStorage.removeItem('token');
+                        window.location.href = '/Account/Login';
+                    } else {
+                        let errorMessage = 'Terjadi kesalahan saat menyimpan data.';
+                        if (xhr.responseJSON && xhr.responseJSON.errors) {
+                            errorMessage = Object.values(xhr.responseJSON.errors).flat().join('\n');
+                        }
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error!',
+                            text: errorMessage
+                        });
+                    }
+                }
+            });
+        }
+
+        function deleteUser(id) {
+            Swal.fire({
+                title: 'Apakah Anda yakin?',
+                text: "Data yang dihapus tidak dapat dikembalikan!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Ya, hapus!',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: `/api/user/${id}`,
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': 'Bearer ' + token
+                        },
+                        success: function() {
+                            dataTable.ajax.reload();
+                            Swal.fire(
+                                'Terhapus!',
+                                'Data pengguna berhasil dihapus.',
+                                'success'
+                            );
+                        },
+                        error: function(xhr) {
+                            if (xhr.status === 401) {
+                                localStorage.removeItem('token');
+                                window.location.href = '/Account/Login';
+                            } else {
+                                Swal.fire(
+                                    'Error!',
+                                    'Terjadi kesalahan saat menghapus data.',
+                                    'error'
+                                );
+                            }
+                        }
+                    });
+                }
+            });
+        }
+    </script>
+} 
